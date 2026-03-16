@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>teragon labs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      html, body {
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+      }
+
+      #canvas-wrap {
+        padding-top: 100px;
+        width: min(90vw, 500px);
+        aspect-ratio: 1 / 1;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #brand-text {
+        font-family: Georgia, serif, "Silkscreen", system-ui, sans-serif;
+        font-size: 16pt;
+        letter-spacing: 0.2em;
+      }
+
+      #definition {
+        z-index: 10;
+        margin: 0;
+        text-align: left;
+        white-space: pre-line;
+        font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+        font-size: 14pt;
+        letter-spacing: 0.03em;
+        opacity: 0.85;
+      }
+
+      #definition ol {
+        list-style: decimal;
+        padding-left: 1.4em;
+      }
+
+      a, a:visited {
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="canvas-wrap"></div>
+
+    <div id="definition">
+      <b id="brand-text">teragon</b>
+
+      noun.
+      teragon. (plural <i>teragons</i>).
+      <ol>
+       <li>an <i>infinite <a target="_blank" href="https://en.wikipedia.org/wiki/Self-similarity">self-referencing</a> fractal</i>.</li>
+       <li>a polygon that has infinite fractal sides, the most famous example being
+      the Koch snowflake, one of the earliest fractals, described by Helge von Koch
+      in his paper <i>On a Continuous Curve Without Tangents, Constructible from
+      Elementary Geometry</i> (1904).</li>
+       <li>term coined by <i>Benoît Mandelbrot</i> from the words
+      <i>τέρας</i> (<i>teras</i>: wonder, marvel) + γωνία (<i>gōnía</i>: corner), in
+      his book <i>The Fractal Geometry of Nature</i> (1982).</li>
+        <li><b>an AI research and engineering lab from London, UK (2026).</b></li>
+      </ol>
+    </div>
+
+    <script type="module">
+      import * as THREE from "https://unpkg.com/three@0.162.0/build/three.module.js";
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
+
+      const canvasWrap = document.getElementById("canvas-wrap");
+      const definitionLabel = document.getElementById("definition");
+
+      const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+      camera.position.set(0, 0, 8);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      canvasWrap.appendChild(renderer.domElement);
+
+      const MAX_ITERATIONS = 6;
+      const SCALE = 5.5;
+
+      // Global controls
+      const ANIMATION_SPEED = 0.2;    // growth/shrink cycles per second
+      const ROTATION_SPEED = 0.0;     // radians per second (0 = no rotation)
+      const KOCH_DIRECTION = -1;      // -1 = outward spikes, +1 = inward spikes
+      const THEME_LERP_SPEED = 6.0;   // higher = faster color transition
+
+      function kochSplit(p0, p1, directionSign) {
+        const v = new THREE.Vector2().subVectors(p1, p0);
+        const a = new THREE.Vector2().copy(p0).addScaledVector(v, 1 / 3);
+        const c = new THREE.Vector2().copy(p0).addScaledVector(v, 2 / 3);
+
+        const ac = new THREE.Vector2().subVectors(c, a);
+        const sin60 = Math.sqrt(3) / 2;
+        const dir = KOCH_DIRECTION * directionSign;
+        const b = new THREE.Vector2(
+          a.x + ac.x * 0.5 - dir * ac.y * sin60,
+          a.y + dir * ac.x * sin60 + ac.y * 0.5
+        );
+
+        return { a, b, c };
+      }
+
+      function subdivideSegmentAnimated(p0, p1, depth, fullDepth, frac, directionSign, out) {
+        if (depth > fullDepth || depth >= MAX_ITERATIONS) {
+          out.push(p0);
+          return;
+        }
+
+        const { a, b, c } = kochSplit(p0, p1, directionSign);
+
+        // Fully apply this level and recurse deeper.
+        if (depth < fullDepth) {
+          subdivideSegmentAnimated(p0, a, depth + 1, fullDepth, frac, directionSign, out);
+          subdivideSegmentAnimated(a, b, depth + 1, fullDepth, frac, directionSign, out);
+          subdivideSegmentAnimated(b, c, depth + 1, fullDepth, frac, directionSign, out);
+          subdivideSegmentAnimated(c, p1, depth + 1, fullDepth, frac, directionSign, out);
+          return;
+        }
+
+        // Partially apply this frontier level for smooth growth/shrink.
+        if (frac <= 0) {
+          out.push(p0);
+          return;
+        }
+
+        const mid = new THREE.Vector2().addVectors(a, c).multiplyScalar(0.5);
+        const bPartial = mid.lerp(b, frac);
+        out.push(p0, a, bPartial, c);
+      }
+
+      function buildAnimatedKochPolygon(signedProgress) {
+        const absProgress = Math.abs(signedProgress);
+        const fullDepth = Math.floor(absProgress);
+        const frac = absProgress - fullDepth;
+        const directionSign = signedProgress < 0 ? -1 : 1;
+
+        const h = Math.sqrt(3) / 2;
+        const base = [
+          new THREE.Vector2(-0.5, -h / 3),
+          new THREE.Vector2( 0.5, -h / 3),
+          new THREE.Vector2( 0.0,  2 * h / 3),
+        ];
+
+        const poly = [];
+        for (let i = 0; i < base.length; i++) {
+          const p0 = base[i];
+          const p1 = base[(i + 1) % base.length];
+          subdivideSegmentAnimated(p0, p1, 0, fullDepth, frac, directionSign, poly);
+        }
+
+        return poly;
+      }
+
+      const shapeGroup = new THREE.Group();
+      scene.add(shapeGroup);
+
+      const geometry = new THREE.BufferGeometry();
+      const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+      const line = new THREE.LineLoop(geometry, material);
+      shapeGroup.add(line);
+
+      const glowGeometry = new THREE.BufferGeometry();
+      const glowMaterial = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.2
+      });
+      const line2 = new THREE.LineLoop(glowGeometry, glowMaterial);
+      line2.position.z = -0.06;
+      line2.scale.setScalar(1.01);
+      shapeGroup.add(line2);
+
+      const clock = new THREE.Clock();
+
+      function resizeRenderer() {
+        const width = canvasWrap.clientWidth;
+        const height = canvasWrap.clientHeight;
+        camera.aspect = width / Math.max(height, 1);
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+      }
+
+      let isWhiteOnBlack = true;
+      const currentBg = new THREE.Color(0x000000);
+      const currentFg = new THREE.Color(0xffffff);
+      const targetBg = new THREE.Color(0x000000);
+      const targetFg = new THREE.Color(0xffffff);
+
+      function setThemeTargets() {
+        targetBg.setHex(isWhiteOnBlack ? 0x000000 : 0xffffff);
+        targetFg.setHex(isWhiteOnBlack ? 0xffffff : 0x000000);
+      }
+
+      function updateTheme(dt) {
+        const alpha = 1 - Math.exp(-THEME_LERP_SPEED * dt);
+        currentBg.lerp(targetBg, alpha);
+        currentFg.lerp(targetFg, alpha);
+
+        scene.background.copy(currentBg);
+        document.body.style.backgroundColor = currentBg.getStyle();
+        material.color.copy(currentFg);
+        glowMaterial.color.copy(currentFg);
+        const fgCss = currentFg.getStyle();
+        definitionLabel.style.color = fgCss;
+      }
+
+      function updateGeometry(progress) {
+        const poly = buildAnimatedKochPolygon(progress);
+        const positions = [];
+
+        for (const p of poly) {
+          positions.push(p.x * SCALE, p.y * SCALE, 0);
+        }
+
+        const attr = new THREE.Float32BufferAttribute(positions, 3);
+        geometry.setAttribute("position", attr);
+        geometry.computeBoundingSphere();
+
+        glowGeometry.setAttribute("position", attr.clone());
+        glowGeometry.computeBoundingSphere();
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const dt = clock.getDelta();
+        const t = clock.elapsedTime;
+        const signedProgress = Math.sin(2 * Math.PI * ANIMATION_SPEED * t) * MAX_ITERATIONS;
+
+        updateGeometry(signedProgress);
+        shapeGroup.rotation.z = ROTATION_SPEED * t;
+        updateTheme(dt);
+
+        renderer.render(scene, camera);
+      }
+
+      resizeRenderer();
+      setThemeTargets();
+      updateTheme(1); // apply initial theme immediately
+      animate();
+
+      canvasWrap.addEventListener("click", () => {
+        isWhiteOnBlack = !isWhiteOnBlack;
+        setThemeTargets();
+      });
+
+      //window.addEventListener("resize", resizeRenderer);
+    </script>
+  </body>
+</html>
