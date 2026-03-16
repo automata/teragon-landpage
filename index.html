@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>teragon labs</title>
+    <link rel="icon" href="public/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="public/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="public/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="public/apple-touch-icon.png" />
+    <link rel="manifest" href="public/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
@@ -63,8 +68,76 @@
         margin-top: 1.28em;
       }
 
-      a, a:visited {
+      #builds {
+        width: min(92vw, 760px);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+        margin-left: 20px;
+      }
+
+      .build-card,
+      .build-card:visited {
+        position: relative;
+        overflow: hidden;
+        display: block;
+        border-left: 1px solid currentColor;
+        border-radius: 8px;
+        padding: 10px 12px;
+        color: inherit;
+        text-decoration: none;
+        line-height: 1.3;
+        transform: translateY(0) scale(1);
+        transition: transform 220ms ease;
+      }
+
+      .build-card::before {
+        content: "";
+        position: absolute;
+        top: -60%;
+        left: -40%;
+        width: 28%;
+        height: 250%;
+        background: linear-gradient(90deg, transparent, currentColor, transparent);
+        opacity: 0.08;
+        transition: transform 560ms ease;
+        pointer-events: none;
+      }
+
+      .build-card:hover,
+      .build-card:focus-visible {
+        text-decoration: none;
+      }
+
+      .build-card:hover::before,
+      .build-card:focus-visible::before {
+        transform: translateX(520%) skewX(-24deg);
+      }
+
+      .build-title {
+        display: block;
+        font-family: Georgia, "Silkscreen", system-ui, sans-serif;
+        letter-spacing: 0.16em;
+        font-size: clamp(14px, 2.8vw, 18px);
+      }
+
+      .build-desc {
+        display: block;
+        margin-top: 20px;
+        font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+        font-size: clamp(14px, 3vw, 18px);
+        line-height: 1.2;
+        opacity: 0.9;
+        transition: opacity 220ms ease, transform 220ms ease;
+      }
+
+      #definition a, #definition a:visited {
         color: #777;
+      }
+      #definition a:hover {
+        text-decoration: none;
+        color: #666;
       }
 
       @media (max-width: 640px) {
@@ -76,6 +149,10 @@
         #canvas-wrap {
           width: 94vw;
           max-height: 52svh;
+        }
+
+        #builds {
+          gap: 8px;
         }
       }
     </style>
@@ -97,8 +174,19 @@
        <li>term coined by <i>Benoît Mandelbrot</i> from the words
       <i>τέρας</i> (<i>teras</i>: wonder, marvel) + γωνία (<i>gōnía</i>: corner), in
       his book <i>The Fractal Geometry of Nature</i> (1982).</li>
-        <li><b>an AI research and engineering lab from London, UK (2026).</b></li>
+        <li><b>an AI research and engineering lab from London, UK (2026), currently building:</b></li>
       </ol>
+    </div>
+
+    <div id="builds" aria-label="currently building">
+      <a class="build-card" target="_blank" rel="noopener noreferrer" href="https://suuper.dev">
+        <span class="build-title">suuper.dev</span>
+        <span class="build-desc">An AI coding platform.</span>
+      </a>
+      <a class="build-card" target="_blank" rel="noopener noreferrer" href="https://hackable.space">
+        <span class="build-title">hackable.space</span>
+        <span class="build-desc">An AI education platform.</span>
+      </a>
     </div>
 
     <script type="module">
@@ -109,6 +197,7 @@
 
       const canvasWrap = document.getElementById("canvas-wrap");
       const definitionLabel = document.getElementById("definition");
+      const buildsLabel = document.getElementById("builds");
 
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
       camera.position.set(0, 0, 8);
@@ -244,6 +333,7 @@
         glowMaterial.color.copy(currentFg);
         const fgCss = currentFg.getStyle();
         definitionLabel.style.color = fgCss;
+        buildsLabel.style.color = fgCss;
       }
 
       function updateGeometry(progress) {
