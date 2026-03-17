@@ -84,7 +84,14 @@
       }
 
       #footer {
-        margin-bottom: 100px;
+        width: min(92vw, 760px);
+        margin: 200px 0 100px;
+        text-align: center;
+        font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+        font-size: clamp(12px, 2.8vw, 15px);
+        line-height: 1.35;
+        letter-spacing: 0.01em;
+        opacity: 0.55;
       }
 
       .build-card,
@@ -199,7 +206,7 @@
       </a>
     </div>
 
-    <div id="footer"></div>
+    <div id="footer">Teragon Labs Ltd is registered in England and Wales (Registered No. 17096916). Copyright 2026.</div>
 
     <script type="module">
       import * as THREE from "https://unpkg.com/three@0.162.0/build/three.module.js";
@@ -210,6 +217,7 @@
       const canvasWrap = document.getElementById("canvas-wrap");
       const definitionLabel = document.getElementById("definition");
       const buildsLabel = document.getElementById("builds");
+      const footerLabel = document.getElementById("footer");
 
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
       camera.position.set(0, 0, 8);
@@ -346,6 +354,7 @@
         const fgCss = currentFg.getStyle();
         definitionLabel.style.color = fgCss;
         buildsLabel.style.color = fgCss;
+        footerLabel.style.color = fgCss;
       }
 
       function updateGeometry(progress) {
